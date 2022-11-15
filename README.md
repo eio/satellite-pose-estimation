@@ -1,11 +1,6 @@
 # Installing packages
 
-	pip3 install torch torchvision 'pillow==9.2.0'
-	pip3 install matplotlib
-	pip3 install pandas
-	pip3 install opencv-python
-	pip3 install scipy
-	pip3 install scikit-image
+Required Python packages are listed in `requirements.txt`
 
 # The code
 

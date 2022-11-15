@@ -1,0 +1,9 @@
+matplotlib==3.6.2
+numpy==1.22.3
+opencv_python==4.6.0.66
+pandas==1.4.2
+Pillow==9.3.0
+scipy==1.7.3
+skimage==0.0
+torch==1.13.0
+torchvision==0.14.0
