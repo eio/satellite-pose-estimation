@@ -1,8 +1,7 @@
+# import pickle
 import os
 import csv
-import pickle
 import numpy as np
-from PIL import Image
 from datetime import datetime
 import matplotlib.pyplot as plt
 
