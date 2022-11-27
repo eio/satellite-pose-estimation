@@ -11,15 +11,15 @@
 
 To train the model from scratch:
 
-	py run_train_model.py
+	python run_train_model.py
 
 To load and test the saved, pre-trained model:
 
-	py run_train_model.py -l
+	python run_train_model.py -l
 
 ...or:
 
-	py run_train_model.py --load
+	python run_train_model.py --load
 
 # Resources
 
