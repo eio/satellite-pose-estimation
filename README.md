@@ -7,6 +7,20 @@
 	pip3 install scipy
 	pip3 install scikit-image
 
+# Running the code
+
+To train the model from scratch:
+
+	py run_train_model.py
+
+To load and test the saved, pre-trained model:
+
+	py run_train_model.py -l
+
+...or:
+
+	py run_train_model.py --load
+
 # Resources
 
 PyTorch Resnet implementation taken from:
