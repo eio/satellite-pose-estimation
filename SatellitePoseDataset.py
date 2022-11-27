@@ -50,10 +50,11 @@ class SatellitePoseDataset(torch.utils.data.Dataset):
         ###############################################
         # Just get the pose label data: ["Tx", "Ty", "Tz", "Qx", "Qy", "Qz", "Qw"]
         pose = self.satellite_pose_frame.iloc[row, pose_start_column:]
-        pose = np.array([pose])
+        pose = np.array(pose)
+        # Cast pose data as floats
+        pose = pose.astype("float")
         # Reshape the pose label data from row vector to column vector, as PyTorch expects
-        # pose = pose.astype("float").reshape(-1, 2)
-        pose = pose.astype("float").reshape(-1, 1)
+        # pose = pose.reshape(-1, 1)
         # Build the sample dictionary
         sample = {"image": image, "pose": pose}
         # Apply data transformations if any are specified

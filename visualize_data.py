@@ -91,27 +91,29 @@ def show_pose(image, pose):
     to be called with on pre-processed data
     already loaded in PyTorch custom SatellitePoseDataset
     """
-    # print(image)
+    print(pose)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # Tx, Ty, Tz
-    Tx = pose[0][0]
-    Ty = pose[1][0]
-    Tz = pose[2][0]
+    Tx = pose[0]
+    Ty = pose[1]
+    Tz = pose[2]
     # Qx, Qy, Qz, Qw
-    Qx = pose[3][0]
-    Qy = pose[4][0]
-    Qz = pose[5][0]
-    Qw = pose[6][0]
+    Qx = pose[3]
+    Qy = pose[4]
+    Qz = pose[5]
+    Qw = pose[6]
     # Visualize
     r = np.array([Tx, Ty, Tz])
     q = np.array([Qx, Qy, Qz, Qw])
+    print("q", q)  # q [-0.03110935  0.10148219 -0.60798194  0.7868237 ]
+    print("r", r)  # r [-0.25812295  0.01125834  2.00812602]
     visualize(image, q, r)
     # Pause a bit so that plots are updated
     plt.pause(0.001)
 
 
 if __name__ == "__main__":
-    root_dir = "CHANGE_THIS"
+    root_dir = "/Users/elliottwobler/Desktop/Computer_Visions/project/training_grounds/"
     image_path = os.path.join(root_dir, "train/images/GT011")
     predictions_filepath = "predictions_submission.csv"
     visualize_predicted_data(root_dir, image_path, predictions_filepath)
