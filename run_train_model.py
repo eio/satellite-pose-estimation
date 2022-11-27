@@ -322,8 +322,7 @@ if __name__ == "__main__":
         #####################################
         # Make epochs 1-indexed for better prints
         epoch_range = range(1, N_EPOCHS + 1)
-        # Iterate through each epoch
-        # doing the train/test steps
+        # Train and test for each epoch
         for epoch in epoch_range:
             train(epoch)
             test(epoch)
