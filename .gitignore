@@ -4,3 +4,5 @@ Archive*
 files/*
 train/*
 val/*
+test_real/*
+test_synthetic/*
