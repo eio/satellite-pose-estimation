@@ -123,7 +123,7 @@ def evaluate_performance(train_counter, train_losses, test_counter, test_losses)
     plt.legend(["Train Loss", "Test Loss"], loc="upper right")
     plt.xlabel("Number of Training Examples Seen")
     plt.ylabel("Mean Square Error (MSE) Loss")
-    plt.savefig(output)
+    plt.savefig(FIGURE_OUTPUT)
     print("Performance evaluation saved to: `{}`".format(FIGURE_OUTPUT))
 
 
