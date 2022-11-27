@@ -6,6 +6,15 @@ import numpy as np
 import pandas as pd
 from skimage import io, transform, img_as_ubyte, img_as_float
 
+# Specify some column indices for code readability
+# fieldnames = ["filename", "sequence", "Tx", "Ty", "Tz", "Qx", "Qy", "Qz", "Qw"]
+# filename_column = self.satellite_pose_frame.columns.get_loc("filename") # === 0
+# sequence_column = self.satellite_pose_frame.columns.get_loc("sequence") # === 1
+# pose_start_column = self.satellite_pose_frame.columns.get_loc("Tx") # === 2
+FILENAME_COLUMN = 0
+SEQUENCE_COLUMN = 1
+POSE_START_COLUMN = 2
+
 
 class SatellitePoseDataset(torch.utils.data.Dataset):
     """Satellite pose dataset."""
@@ -28,18 +37,10 @@ class SatellitePoseDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        # Specify some column indices for code readability
-        # fieldnames = ["filename", "sequence", "Tx", "Ty", "Tz", "Qx", "Qy", "Qz", "Qw"]
-        # filename_column = self.satellite_pose_frame.columns.get_loc("filename") # === 0
-        # sequence_column = self.satellite_pose_frame.columns.get_loc("sequence") # === 1
-        # pose_start_column = self.satellite_pose_frame.columns.get_loc("Tx") # === 2
-        filename_column = 0
-        sequence_column = 1
-        pose_start_column = 2
         # Get the image filename and directory name (i.e. sequence)
         row = idx  # rename this variable for code clarity
-        filename = self.satellite_pose_frame.iloc[row, filename_column]
-        sequence = self.satellite_pose_frame.iloc[row, sequence_column]
+        filename = self.satellite_pose_frame.iloc[row, FILENAME_COLUMN]
+        sequence = self.satellite_pose_frame.iloc[row, SEQUENCE_COLUMN]
         # Build the image filepath and load the image file
         img_name = os.path.join(self.root_dir, sequence, filename)
         image = io.imread(img_name)
@@ -49,7 +50,7 @@ class SatellitePoseDataset(torch.utils.data.Dataset):
         # image = utils.to_tensor_and_normalize(image)
         ###############################################
         # Just get the pose label data: ["Tx", "Ty", "Tz", "Qx", "Qy", "Qz", "Qw"]
-        pose = self.satellite_pose_frame.iloc[row, pose_start_column:]
+        pose = self.satellite_pose_frame.iloc[row, POSE_START_COLUMN:]
         pose = np.array(pose)
         # Cast pose data as floats
         pose = pose.astype("float")

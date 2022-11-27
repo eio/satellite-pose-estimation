@@ -1,7 +1,8 @@
 import os
 import csv
-import pickle
+import argparse
 import numpy as np
+import pandas as pd
 from datetime import datetime
 import matplotlib.pyplot as plt
 
@@ -16,23 +17,37 @@ import torch.optim as optim
 import SatellitePoseDataset as SPD
 from model_architectures.pytorch_resnet import ResNet50
 
-# Setup paths for saving model + optimizer
-MODEL_PATH = "results/model.pth"
-OPTIMIZER_PATH = "results/optimizer.pth"
+# Setup tunable constants
+N_EPOCHS = 1
+BATCH_SIZE = 1
+LOG_INTERVAL = 10
+# Setup path for saving model + optimizer
+SAVED_MODEL_PATH = "results/model+optimizer.pth"
 # Setup paths for accessing data
 TRAIN_CSV = "train/train.csv"
 TRAIN_ROOT = "train/images/"
-TEST_CSV = "val/val.csv"
-TEST_ROOT = "val/images/"
+VALIDATION_CSV = "val/val.csv"
+VALIDATION_ROOT = "val/images/"
+# Setup path for output predictions
+PREDICTIONS_OUTPUT_CSV = "predictions_submission.csv"
 
 
 def Net():
     """
     Retrieve the pre-constructed CNN model
     """
-    # img_channel == 3 because RGB
-    # num_classes == 7 because Pose(q,r)
+    # img_channel == 3 because [R, G, B]
+    # num_classes == 7 because ["Tx", "Ty", "Tz", "Qx", "Qy", "Qz", "Qw"]
     return ResNet50(img_channel=3, num_classes=7)
+
+
+def Optimizer(net):
+    """
+    Create SGD optimizer with specified hyperparameters
+    """
+    learning_rate = 0.01
+    momentum = 0.5
+    return optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
 
 
 def build_data_loaders(batch_size_train, batch_size_test, img_downscale_size):
@@ -46,8 +61,8 @@ def build_data_loaders(batch_size_train, batch_size_test, img_downscale_size):
     )
     # Create the Test dataset
     test_dataset = SPD.SatellitePoseDataset(
-        csv_file=TEST_CSV,
-        root_dir=TEST_ROOT,
+        csv_file=VALIDATION_CSV,
+        root_dir=VALIDATION_ROOT,
         transform=torchvision.transforms.Compose(
             [SPD.Rescale(img_downscale_size), SPD.ToTensor()]
         ),
@@ -70,18 +85,30 @@ def build_data_loaders(batch_size_train, batch_size_test, img_downscale_size):
 
 
 def save_model(net, optimizer):
+    # https://pytorch.org/tutorials/beginner/saving_loading_models.html
     # Save the current state of the Model and the Optimizer
     # so we can load the latest state later on
-    torch.save(net.state_dict(), MODEL_PATH)
-    torch.save(optimizer.state_dict(), OPTIMIZER_PATH)
+    torch.save(
+        {
+            "model_state_dict": net.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+        },
+        SAVED_MODEL_PATH,
+    )
 
 
 def load_model():
-    print("Loading the saved model: `{}`".format(MODEL_PATH))
+    """
+    Load and return the saved, pre-trained Model and Optimizer
+    """
+    print("Loading the saved model: `{}`".format(SAVED_MODEL_PATH))
+    saved_state = torch.load(SAVED_MODEL_PATH)
     net = Net()
-    net.load_state_dict(torch.load(MODEL_PATH))
+    optimizer = Optimizer(net)
+    net.load_state_dict(saved_state["model_state_dict"])
+    optimizer.load_state_dict(saved_state["optimizer_state_dict"])
     print("Model loaded.")
-    return net
+    return net, optimizer
 
 
 def evaluate_performance(train_counter, train_losses, test_counter, test_losses):
@@ -89,7 +116,7 @@ def evaluate_performance(train_counter, train_losses, test_counter, test_losses)
     # print("train_losses", train_losses)
     # print("test_counter", test_counter)
     # print("test_losses", test_losses)
-    output = "figures/loss.png"
+    FIGURE_OUTPUT = "figures/loss.png"
     fig = plt.figure()
     plt.plot(train_counter, train_losses, color="blue")
     plt.scatter(test_counter, test_losses, color="red")
@@ -97,36 +124,42 @@ def evaluate_performance(train_counter, train_losses, test_counter, test_losses)
     plt.xlabel("Number of Training Examples Seen")
     plt.ylabel("Mean Square Error (MSE) Loss")
     plt.savefig(output)
-    print("Performance evaluation saved to: `{}`".format(output))
+    print("Performance evaluation saved to: `{}`".format(FIGURE_OUTPUT))
 
 
-# def write_output_csv(predictions, metadata):
-#     """
-#     Write model predictions to output submission CSV
-#     """
-#     print("Write the predicted output to CSV...")
-#     print("\t predictions length: {}".format(len(predictions)))
-#     print("\t metadata length: {}".format(len(metadata)))
-#     with open("predictions_submission.csv", "w", newline="") as csvfile:
-#         fieldnames = ["filename", "sequence", "Tx", "Ty", "Tz", "Qx", "Qy", "Qz", "Qw"]
-#         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-#         writer.writeheader()
-#         for i in range(0, len(predictions)):
-#             row = {
-#                 "filename": metadata[i]["filename"],
-#                 "sequence": metadata[i]["sequence"],
-#                 "Tx": predictions[i][0],
-#                 "Ty": predictions[i][1],
-#                 "Tz": predictions[i][2],
-#                 "Qx": predictions[i][3],
-#                 "Qy": predictions[i][4],
-#                 "Qz": predictions[i][5],
-#                 "Qw": predictions[i][6],
-#             }
-#             writer.writerow(row)
+def write_output_csv(predictions):
+    """
+    Write model predictions to output submission CSV
+    """
+    metadata = pd.read_csv(VALIDATION_CSV)
+    print("Write the predicted output to: {}...".format(PREDICTIONS_OUTPUT_CSV))
+    print("\t predictions length: {}".format(len(predictions)))
+    print("\t metadata length: {}".format(len(metadata)))
+    with open(PREDICTIONS_OUTPUT_CSV, "w", newline="") as csvfile:
+        fieldnames = ["filename", "sequence", "Tx", "Ty", "Tz", "Qx", "Qy", "Qz", "Qw"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for i in range(0, len(predictions)):
+            row = {
+                "filename": metadata.iloc[i, SPD.FILENAME_COLUMN],
+                "sequence": metadata.iloc[i, SPD.SEQUENCE_COLUMN],
+                "Tx": predictions[i][0],
+                "Ty": predictions[i][1],
+                "Tz": predictions[i][2],
+                "Qx": predictions[i][3],
+                "Qy": predictions[i][4],
+                "Qz": predictions[i][5],
+                "Qw": predictions[i][6],
+            }
+            writer.writerow(row)
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    # on/off flag for whether script should run in "load" or "train" mode
+    parser.add_argument("-l", "--load", action="store_true")
+    args = parser.parse_args()
+    LOAD_MODEL = args.load
     #############################################
     ## Print start time to keep track of runtime
     #############################################
@@ -135,11 +168,7 @@ if __name__ == "__main__":
     ## Initialize the CNN model
     ###########################
     net = Net()
-    # specify the optimizer hyperparameters
-    learning_rate = 0.01
-    momentum = 0.5
-    # specify the optimizer
-    optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
+    optimizer = Optimizer(net)
     # specify the loss function
     # Mean Square Error (MSE) is the most commonly used regression loss function.
     # MSE is the sum of squared distances between our target variable and predicted values.
@@ -154,7 +183,6 @@ if __name__ == "__main__":
     #################################################################
     ## Load the custom SatellitePoseDataset into PyTorch DataLoaders
     #################################################################
-    BATCH_SIZE = 1
     batch_size_train = BATCH_SIZE
     batch_size_test = BATCH_SIZE
     # downscale by a factor of 4 from original size: (1440,1080)
@@ -167,8 +195,6 @@ if __name__ == "__main__":
     #########################
     ## Initialize the output
     #########################
-    n_epochs = 1  # 3
-    log_interval = 10
     train_losses = []
     train_counter = []
     test_losses = []
@@ -179,12 +205,13 @@ if __name__ == "__main__":
     ## Train the Network
     ######################
     ######################
-
     def train(epoch):
+        print("\nStart Training for Epoch #{}...".format(epoch))
         running_loss = 0.0
         for i, batch in enumerate(train_loader, 0):
             inputs = batch["image"].float()
-            labels = batch["pose"].float()  # .reshape(1, 7 * batch_size_train)
+            labels = batch["pose"].float()
+            # labels = batch["pose"].float().reshape(1, 7 * batch_size_train)
             # zero the parameter gradients
             optimizer.zero_grad()
             # forward + backward + optimize
@@ -195,9 +222,9 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
             # print and store statistics
-            if i % log_interval == 0:
+            if i % LOG_INTERVAL == 0:
                 print(
-                    "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
+                    "Train Epoch: {} [{}/{} ({}%)]\tLoss: {}".format(
                         epoch,
                         i,  # i * len(batch),
                         len(train_loader.dataset),
@@ -213,17 +240,20 @@ if __name__ == "__main__":
                 ## Save the Model  ##
                 #####################
                 save_model(net, optimizer)
+        print("Finished Training for Epoch #{}.".format(epoch))
 
     ################################
     ################################
     ### Test the Whole Test Dataset
     ################################
     ################################
-    def test():
+    def test(epoch=1):
+        print("\nStart Testing...")
+        # Initialize array to store all predictions
+        predictions = []
         # Let us look at how the network performs on the whole dataset.
         test_loss = 0
         correct = 0
-        total = 0
         # since we're not training, we don't need to calculate the gradients for our outputs
         with torch.no_grad():
             # for data in test_loader:
@@ -233,19 +263,30 @@ if __name__ == "__main__":
                 # labels = batch["pose"].float().reshape(1, 7)
                 # calculate outputs by running images through the network
                 outputs = net(inputs)
+                # store the predicted outputs
+                prediction = outputs.numpy().flatten()
+                predictions.append(prediction)
                 # check the loss
                 test_loss = criterion(outputs, labels)
+                # print("outputs:", outputs)
+                # print("labels:", labels)
                 ######################
                 #### Scoring System:
                 ######################
-                # print("outputs:", outputs)
-                # print("labels:", labels)
                 # print(outputs == labels)                  # >>> tensor([[False, False, False, False, False, False, False]])
                 # print((outputs == labels).sum())          # >>>  tensor(0)
                 # print((outputs == labels).sum().item())   # >>>  0
                 correct += (outputs == labels).sum().item()
                 # print and store statistics
-                if i % log_interval == 0:
+                if i % LOG_INTERVAL == 0:
+                    print(
+                        "Test: [{}/{} ({}%)]\tLoss: {}".format(
+                            i,  # i * len(batch),
+                            len(test_loader.dataset),
+                            100.0 * i / len(test_loader),
+                            test_loss.item(),
+                        )
+                    )
                     test_losses.append(test_loss.item())
                     test_counter.append(
                         (i * batch_size_test) + ((epoch - 1) * len(test_loader.dataset))
@@ -258,27 +299,38 @@ if __name__ == "__main__":
                 100.0 * (correct / len(test_loader.dataset)),
             )
         )
+        print("Finished Testing.")
+        # Write the predicted poses to an output CSV
+        # in the submission format expected
+        write_output_csv(predictions)
 
     ####################################
     ####################################
     ## Perform the Training and Testing
     ####################################
     ####################################
-    # Make epochs 1-indexed for better prints
-    epoch_range = range(1, n_epochs + 1)
-    # Iterate through each epoch
-    # doing the train/test steps
-    for epoch in epoch_range:
-        print("Start Training...")
-        train(epoch)
-        print("Finished Training.")
-        print("Start Testing...")
+    if LOAD_MODEL == True:
+        ###############################################
+        # Load the previously saved model and optimizer
+        ###############################################
+        net, optimizer = load_model()
+        # Test the loaded model
         test()
-        print("Finished Testing.")
-    ###################################
-    ## Evaluate the model's performance
-    ###################################
-    evaluate_performance(train_counter, train_losses, test_counter, test_losses)
+    else:
+        #####################################
+        ## Train the model from the beginning
+        #####################################
+        # Make epochs 1-indexed for better prints
+        epoch_range = range(1, N_EPOCHS + 1)
+        # Iterate through each epoch
+        # doing the train/test steps
+        for epoch in epoch_range:
+            train(epoch)
+            test(epoch)
+        ###################################
+        ## Evaluate the model's performance
+        ###################################
+        evaluate_performance(train_counter, train_losses, test_counter, test_losses)
 
     ############
     ## The End
