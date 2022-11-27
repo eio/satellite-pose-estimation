@@ -47,10 +47,3 @@ Loss Functions:
 
 	https://heartbeat.comet.ml/5-regression-loss-functions-all-machine-learners-should-know-4fb140e9d4b0
 	https://neptune.ai/blog/pytorch-loss-functions#:~:text=Broadly%20speaking
-
-
-MAYBE THIS TOO?
-
-	https://www.kaggle.com/code/schyn7/image-classification-pytorch-cnn
-
-	https://www.cs.toronto.edu/~lczhang/aps360_20191/lec/w03/convnet.html
