@@ -1,0 +1,1 @@
+While `run_train_model.py` is running, the pose predictions CSV for each epoch will be output to this directory.

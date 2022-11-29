@@ -18,9 +18,9 @@ import SatellitePoseDataset as SPD
 from model_architectures.pytorch_resnet import ResNet50
 
 # Setup tunable constants
-N_EPOCHS = 1
+N_EPOCHS = 20
 BATCH_SIZE = 1
-LOG_INTERVAL = 10
+LOG_INTERVAL = 50
 # Setup path for saving model + optimizer
 SAVED_MODEL_PATH = "results/model+optimizer.pth"
 # Setup paths for accessing data
@@ -29,7 +29,7 @@ TRAIN_ROOT = "train/images/"
 VALIDATION_CSV = "val/val.csv"
 VALIDATION_ROOT = "val/images/"
 # Setup path for output predictions
-PREDICTIONS_OUTPUT_CSV = "predictions_submission.csv"
+PREDICTIONS_OUTPUT_PATH = "predictions/"
 
 
 def Net():
@@ -47,6 +47,7 @@ def Optimizer(net):
     """
     learning_rate = 0.01
     momentum = 0.5
+    # TODO: maybe try Adam
     return optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
 
 
@@ -111,31 +112,32 @@ def load_model():
     return net, optimizer
 
 
-def evaluate_performance(train_counter, train_losses, test_counter, test_losses):
+def evaluate_performance(completed_epochs, avg_train_losses, avg_test_losses):
     # print("train_counter", train_counter)
     # print("train_losses", train_losses)
     # print("test_counter", test_counter)
     # print("test_losses", test_losses)
     FIGURE_OUTPUT = "figures/loss.png"
     fig = plt.figure()
-    plt.plot(train_counter, train_losses, color="blue")
-    plt.scatter(test_counter, test_losses, color="red")
+    plt.scatter(completed_epochs, avg_train_losses, color="blue")
+    plt.scatter(completed_epochs, avg_test_losses, color="red")
     plt.legend(["Train Loss", "Test Loss"], loc="upper right")
-    plt.xlabel("Number of Training Examples Seen")
+    plt.xlabel("Number of Epochs")
     plt.ylabel("Mean Square Error (MSE) Loss")
     plt.savefig(FIGURE_OUTPUT)
     print("Performance evaluation saved to: `{}`".format(FIGURE_OUTPUT))
 
 
-def write_output_csv(predictions):
+def write_output_csv(predictions, epoch):
     """
     Write model predictions to output submission CSV
     """
     metadata = pd.read_csv(VALIDATION_CSV)
-    print("Write the predicted output to: {}...".format(PREDICTIONS_OUTPUT_CSV))
-    print("\t predictions length: {}".format(len(predictions)))
-    print("\t metadata length: {}".format(len(metadata)))
-    with open(PREDICTIONS_OUTPUT_CSV, "w", newline="") as csvfile:
+    output_csv = PREDICTIONS_OUTPUT_PATH + "predictions_epoch{}.csv".format(epoch)
+    print("Write the predicted output to: {}...".format(output_csv))
+    # print("\t predictions length: {}".format(len(predictions)))
+    # print("\t metadata length: {}".format(len(metadata)))
+    with open(output_csv, "w", newline="") as csvfile:
         fieldnames = ["filename", "sequence", "Tx", "Ty", "Tz", "Qx", "Qy", "Qz", "Qw"]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -248,7 +250,7 @@ if __name__ == "__main__":
     ################################
     ################################
     def test(epoch=1):
-        print("\nStart Testing...")
+        print("\nStart Testing for Epoch {}...".format(epoch))
         # Initialize array to store all predictions
         predictions = []
         # Let us look at how the network performs on the whole dataset.
@@ -270,13 +272,11 @@ if __name__ == "__main__":
                 test_loss = criterion(outputs, labels)
                 # print("outputs:", outputs)
                 # print("labels:", labels)
-                ######################
-                #### Scoring System:
-                ######################
-                # print(outputs == labels)                  # >>> tensor([[False, False, False, False, False, False, False]])
-                # print((outputs == labels).sum())          # >>>  tensor(0)
-                # print((outputs == labels).sum().item())   # >>>  0
-                correct += (outputs == labels).sum().item()
+                ## Consider prediction to be correct
+                ## if `test_loss` is "close enough" to a perfect score of 0.0
+                close_enough = 0.001
+                if test_loss <= close_enough:
+                    correct += 1
                 # print and store statistics
                 if i % LOG_INTERVAL == 0:
                     print(
@@ -299,10 +299,10 @@ if __name__ == "__main__":
                 100.0 * (correct / len(test_loader.dataset)),
             )
         )
-        print("Finished Testing.")
+        print("Finished Testing for Epoch {}.".format(epoch))
         # Write the predicted poses to an output CSV
         # in the submission format expected
-        write_output_csv(predictions)
+        write_output_csv(predictions, epoch)
 
     ####################################
     ####################################
@@ -320,18 +320,33 @@ if __name__ == "__main__":
         #####################################
         ## Train the model from the beginning
         #####################################
+        completed_epochs = []
+        # Store running averages of train/test losses for each epoch
+        avg_train_losses = []
+        avg_test_losses = []
         # Make epochs 1-indexed for better prints
         epoch_range = range(1, N_EPOCHS + 1)
         # Train and test for each epoch
         for epoch in epoch_range:
             train(epoch)
             test(epoch)
-        ###################################
-        ## Evaluate the model's performance
-        ###################################
-        evaluate_performance(train_counter, train_losses, test_counter, test_losses)
+            train_loss = np.mean(train_losses)
+            test_loss = np.mean(test_losses)
+            print("[Epoch {}] Avg. Train Loss: {}".format(epoch, train_loss))
+            print("[Epoch {}] Avg. Test Loss: {}".format(epoch, test_loss))
+            # keep track of stats for each epoch
+            avg_train_losses.append(train_loss)
+            avg_test_losses.append(test_loss)
+            completed_epochs.append(epoch)
+            # reset losses before next epoch
+            train_losses = []
+            test_losses = []
+        ##############################################################
+        ## Output model performance evaluation chart across all epochs
+        ##############################################################
+        evaluate_performance(completed_epochs, avg_train_losses, avg_test_losses)
 
     ############
     ## The End
     ############
-    print("End: {}".format(datetime.now()))
+    print("\nEnd: {}".format(datetime.now()))

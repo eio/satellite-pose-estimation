@@ -91,8 +91,8 @@ def show_pose(image, pose):
     to be called with on pre-processed data
     already loaded in PyTorch custom SatellitePoseDataset
     """
-    print(pose)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # print(pose)
+    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # Tx, Ty, Tz
     Tx = pose[0]
     Ty = pose[1]
