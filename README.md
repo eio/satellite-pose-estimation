@@ -1,6 +1,6 @@
 # Installing packages
 
-	pip3 install torch torchvision 'pillow==9.2.0'
+	pip3 install torch torchvision
 	pip3 install matplotlib
 	pip3 install pandas
 	pip3 install opencv-python
