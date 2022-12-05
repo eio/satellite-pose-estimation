@@ -172,6 +172,7 @@ if __name__ == "__main__":
     ###########################
     ## Initialize the CNN model
     ###########################
+    print("Running with device: {}".format(DEVICE))
     # Send model to GPU device (if CUDA-compatible)
     net = Net().to(DEVICE)
     optimizer = Optimizer(net)
