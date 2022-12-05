@@ -13,6 +13,10 @@ To train the model from scratch:
 
 	python run_train_model.py
 
+To train the model from scratch and output all print statements to a local file:
+
+	python run_train_model.py > LOGS.txt
+
 To load and test the saved, pre-trained model:
 
 	python run_train_model.py -l
