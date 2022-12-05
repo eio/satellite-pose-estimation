@@ -17,6 +17,8 @@ import torch.optim as optim
 import SatellitePoseDataset as SPD
 from model_architectures.pytorch_resnet import ResNet50
 
+# Check for CUDA / GPU Support
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Setup tunable constants
 N_EPOCHS = 20
 BATCH_SIZE = 1
@@ -47,7 +49,8 @@ def Optimizer(net):
     """
     learning_rate = 0.01
     momentum = 0.5
-    # TODO: maybe try Adam
+    # TODO: try Adam
+    # optim.Adam(net.parameters(), lr=learning_rate, betas=(0.9, 0.999))
     return optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
 
 
@@ -169,7 +172,8 @@ if __name__ == "__main__":
     ###########################
     ## Initialize the CNN model
     ###########################
-    net = Net()
+    # Send model to GPU device (if CUDA-compatible)
+    net = Net().to(DEVICE)
     optimizer = Optimizer(net)
     # specify the loss function
     # Mean Square Error (MSE) is the most commonly used regression loss function.
@@ -211,8 +215,10 @@ if __name__ == "__main__":
         print("\nStart Training for Epoch #{}...".format(epoch))
         running_loss = 0.0
         for i, batch in enumerate(train_loader, 0):
-            inputs = batch["image"].float()
-            labels = batch["pose"].float()
+            # Convert inputs/labels (aka data/targets)
+            # to float values, and send Tensors to GPU device (if CUDA-compatible)
+            inputs = batch["image"].float().to(DEVICE)
+            labels = batch["pose"].float().to(DEVICE)
             # labels = batch["pose"].float().reshape(1, 7 * batch_size_train)
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -260,8 +266,10 @@ if __name__ == "__main__":
         with torch.no_grad():
             # for data in test_loader:
             for i, batch in enumerate(test_loader, 0):
-                inputs = batch["image"].float()
-                labels = batch["pose"].float()
+                # Convert inputs/labels (aka data/targets)
+                # to float values, and send Tensors to GPU device (if CUDA-compatible)
+                inputs = batch["image"].float().to(DEVICE)
+                labels = batch["pose"].float().to(DEVICE)
                 # labels = batch["pose"].float().reshape(1, 7)
                 # calculate outputs by running images through the network
                 outputs = net(inputs)
