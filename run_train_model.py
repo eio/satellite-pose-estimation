@@ -26,10 +26,10 @@ LOG_INTERVAL = 50
 # Setup path for saving model + optimizer
 SAVED_MODEL_PATH = "results/model+optimizer.pth"
 # Setup paths for accessing data
-TRAIN_CSV = "train/train.csv"
-TRAIN_ROOT = "train/images/"
-VALIDATION_CSV = "val/val.csv"
-VALIDATION_ROOT = "val/images/"
+TRAIN_CSV = "Stream-2/train/train.csv"
+TRAIN_ROOT = "Stream-2/train/images/"
+VALIDATION_CSV = "Stream-2/val/val.csv"
+VALIDATION_ROOT = "Stream-2/val/images/"
 # Setup path for output predictions
 PREDICTIONS_OUTPUT_PATH = "predictions/"
 
