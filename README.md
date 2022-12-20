@@ -17,13 +17,13 @@ To train the model from scratch and output all print statements to a local file:
 
 	python run_train_model.py > LOGS.txt
 
-To load and test the saved, pre-trained model:
+To load and test the saved, pre-trained model on the `test_real` dataset:
 
-	python run_train_model.py -l
+	python run_train_model.py -l -tr
 
-...or:
+To load and test the saved, pre-trained model on the `test_synthetic` dataset:
 
-	python run_train_model.py --load
+	python run_train_model.py -l -ts
 
 # Resources
 

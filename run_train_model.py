@@ -1,4 +1,5 @@
 import os
+import sys
 import csv
 import argparse
 import numpy as np
@@ -30,6 +31,12 @@ TRAIN_CSV = "Stream-2/train/train.csv"
 TRAIN_ROOT = "Stream-2/train/images/"
 VALIDATION_CSV = "Stream-2/val/val.csv"
 VALIDATION_ROOT = "Stream-2/val/images/"
+# Final test data
+TEST_SYNTHETIC_CSV = "Stream-2/test_synthetic/sample_submission_synthetic.csv"
+TEST_SYNTHETIC_ROOT = "Stream-2/test_synthetic/images/"
+TEST_REAL_CSV = "Stream-2/test_real/sample_submission_real.csv"
+TEST_REAL_ROOT = "Stream-2/test_real/images/"
+TEST_REAL_CAMERA_K = "Stream-2/test_real/camera_K.txt"
 # Setup path for output predictions
 PREDICTIONS_OUTPUT_PATH = "predictions/"
 
@@ -64,7 +71,7 @@ def build_data_loaders(batch_size_train, batch_size_test, img_downscale_size):
         ),
     )
     # Create the Test dataset
-    test_dataset = SPD.SatellitePoseDataset(
+    validation_dataset = SPD.SatellitePoseDataset(
         csv_file=VALIDATION_CSV,
         root_dir=VALIDATION_ROOT,
         transform=torchvision.transforms.Compose(
@@ -80,12 +87,32 @@ def build_data_loaders(batch_size_train, batch_size_test, img_downscale_size):
         shuffle=True,
     )
     # Build the Test loader
+    validation_loader = torch.utils.data.DataLoader(
+        validation_dataset,
+        batch_size=batch_size_test,
+        shuffle=True,
+    )
+    return train_loader, validation_loader
+
+
+def build_final_test_data_loader(
+    batch_size_test, img_downscale_size, test_csv, test_root
+):
+    # Create the Final Test dataset
+    test_dataset = SPD.SatellitePoseDataset(
+        csv_file=test_csv,
+        root_dir=test_root,
+        transform=torchvision.transforms.Compose(
+            [SPD.Rescale(img_downscale_size), SPD.ToTensor()]
+        ),
+    )
+    # Build the Final Test loader
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=batch_size_test,
         shuffle=True,
     )
-    return train_loader, test_loader
+    return test_loader
 
 
 def save_model(net, optimizer):
@@ -131,12 +158,13 @@ def evaluate_performance(completed_epochs, avg_train_losses, avg_test_losses):
     print("Performance evaluation saved to: `{}`".format(FIGURE_OUTPUT))
 
 
-def write_output_csv(predictions, epoch):
+def write_output_csv(predictions, epoch, test_dataset_name):
     """
     Write model predictions to output submission CSV
     """
     metadata = pd.read_csv(VALIDATION_CSV)
-    output_csv = PREDICTIONS_OUTPUT_PATH + "predictions_epoch{}.csv".format(epoch)
+    csv_name = "{}_predictions_epoch{}.csv".format(test_dataset_name, epoch)
+    output_csv = PREDICTIONS_OUTPUT_PATH + csv_name
     print("Write the predicted output to: {}...".format(output_csv))
     # print("\t predictions length: {}".format(len(predictions)))
     # print("\t metadata length: {}".format(len(metadata)))
@@ -163,8 +191,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # on/off flag for whether script should run in "load" or "train" mode
     parser.add_argument("-l", "--load", action="store_true")
+    parser.add_argument("-ts", "--synthetic", action="store_true")
+    parser.add_argument("-tr", "--real", action="store_true")
     args = parser.parse_args()
     LOAD_MODEL = args.load
+    TEST_SYNTHETIC = args.synthetic
+    TEST_REAL = args.real
     #############################################
     ## Print start time to keep track of runtime
     #############################################
@@ -187,18 +219,13 @@ if __name__ == "__main__":
     # for anything using random number generation
     random_seed = 1
     torch.manual_seed(random_seed)
-    #################################################################
-    ## Load the custom SatellitePoseDataset into PyTorch DataLoaders
-    #################################################################
+    # configure batch and downscale sizes
     batch_size_train = BATCH_SIZE
     batch_size_test = BATCH_SIZE
     # downscale by a factor of 4 from original size: (1440,1080)
     IMG_WIDTH = 1440 / 4  # 360
     IMG_HEIGHT = 1080 / 4  # 270
     img_downscale_size = (IMG_HEIGHT, IMG_WIDTH)
-    train_loader, test_loader = build_data_loaders(
-        batch_size_train, batch_size_test, img_downscale_size
-    )
     #########################
     ## Initialize the output
     #########################
@@ -311,7 +338,8 @@ if __name__ == "__main__":
         print("Finished Testing for Epoch {}.".format(epoch))
         # Write the predicted poses to an output CSV
         # in the submission format expected
-        write_output_csv(predictions, epoch)
+        test_dataset_name = test_loader.dataset.root_dir.split("/")[1]
+        write_output_csv(predictions, epoch, test_dataset_name)
 
     ####################################
     ####################################
@@ -323,9 +351,34 @@ if __name__ == "__main__":
         # Load the previously saved model and optimizer
         ###############################################
         net, optimizer = load_model()
+        # Update test dataset, overwriting `test_loader` variable
+        if TEST_SYNTHETIC == True:
+            print("Testing for images in: {}".format(TEST_SYNTHETIC_ROOT))
+            test_loader = build_final_test_data_loader(
+                batch_size_test,
+                img_downscale_size,
+                TEST_SYNTHETIC_CSV,
+                TEST_SYNTHETIC_ROOT,
+            )
+        elif TEST_REAL == True:
+            print("Testing for images in: {}".format(TEST_REAL_ROOT))
+            test_loader = build_final_test_data_loader(
+                batch_size_test, img_downscale_size, TEST_REAL_CSV, TEST_REAL_ROOT
+            )
+        else:
+            print(
+                "FAIL: Please specify whether to test the Real or Synthetic dataset (-tr or -ts)"
+            )
+            sys.exit()
         # Test the loaded model
         test()
     else:
+        #################################################################
+        ## Load the custom SatellitePoseDataset into PyTorch DataLoaders
+        #################################################################
+        train_loader, test_loader = build_data_loaders(
+            batch_size_train, batch_size_test, img_downscale_size
+        )
         #####################################
         ## Train the model from the beginning
         #####################################
