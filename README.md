@@ -1,19 +1,22 @@
+# Description
+
+This project adapts a ResNet50 model architecture to perform pose estimation on several series of satellite images (both real and synthetic).
+
+For more information, please see the SPARK Challenge ( https://cvi2.uni.lu/spark2022/ ) organized as part of the AI4Space workshop, in conjunction with the European Conference on Computer Vision (ECCV 2022).
+
+
 # Installing packages
 
-	pip3 install torch torchvision
-	pip3 install matplotlib
-	pip3 install pandas
-	pip3 install opencv-python
-	pip3 install scipy
-	pip3 install scikit-image
+See `requirements.txt` and make sure to also install `cudatoolkit` if you plan to run with a GPU.
+
 
 # Running the code
 
-To train the model from scratch:
+To train the model:
 
 	python run_train_model.py
 
-To train the model from scratch and output all print statements to a local file:
+To train the model and output all print statements to a local file:
 
 	python run_train_model.py > LOGS.txt
 
@@ -24,6 +27,16 @@ To load and test the saved, pre-trained model on the `test_real` dataset:
 To load and test the saved, pre-trained model on the `test_synthetic` dataset:
 
 	python run_train_model.py -l -ts
+
+
+# Output and results
+
+After training, the trained model and optimizer are stored in `results/model+optimizer.pth`
+
+Model predictions are stored as CSV files in `predictions/`
+
+Loss function plots are stored in `figures/`
+
 
 # Resources
 
