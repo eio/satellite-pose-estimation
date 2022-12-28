@@ -21,7 +21,7 @@ from model_architectures.pytorch_resnet import ResNet50
 # Check for CUDA / GPU Support
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Setup tunable constants
-N_EPOCHS = 20
+N_EPOCHS = 10
 BATCH_SIZE = 1
 LOG_INTERVAL = 50
 # Setup path for saving model + optimizer
@@ -38,7 +38,7 @@ TEST_REAL_CSV = "Stream-2/test_real/sample_submission_real.csv"
 TEST_REAL_ROOT = "Stream-2/test_real/images/"
 TEST_REAL_CAMERA_K = "Stream-2/test_real/camera_K.txt"
 # Setup path for output predictions
-PREDICTIONS_OUTPUT_PATH = "predictions/"
+PREDICTIONS_OUTPUT_DIR = "predictions/"
 
 
 def Net():
@@ -134,7 +134,7 @@ def load_model():
     """
     print("Loading the saved model: `{}`".format(SAVED_MODEL_PATH))
     saved_state = torch.load(SAVED_MODEL_PATH)
-    net = Net()
+    net = Net().to(DEVICE)
     optimizer = Optimizer(net)
     net.load_state_dict(saved_state["model_state_dict"])
     optimizer.load_state_dict(saved_state["optimizer_state_dict"])
@@ -158,13 +158,13 @@ def evaluate_performance(completed_epochs, avg_train_losses, avg_test_losses):
     print("Performance evaluation saved to: `{}`".format(FIGURE_OUTPUT))
 
 
-def write_output_csv(predictions, epoch, test_dataset_name):
+def write_output_csv(predictions, sample_csv, epoch, test_dataset_name):
     """
     Write model predictions to output submission CSV
     """
-    metadata = pd.read_csv(VALIDATION_CSV)
+    metadata = pd.read_csv(sample_csv)
     csv_name = "{}_predictions_epoch{}.csv".format(test_dataset_name, epoch)
-    output_csv = PREDICTIONS_OUTPUT_PATH + csv_name
+    output_csv = PREDICTIONS_OUTPUT_DIR + csv_name
     print("Write the predicted output to: {}...".format(output_csv))
     # print("\t predictions length: {}".format(len(predictions)))
     # print("\t metadata length: {}".format(len(metadata)))
@@ -283,7 +283,7 @@ if __name__ == "__main__":
     ### Test the Whole Test Dataset
     ################################
     ################################
-    def test(epoch=1):
+    def test(epoch=1, sample_csv=VALIDATION_CSV):
         print("\nStart Testing for Epoch {}...".format(epoch))
         # Initialize array to store all predictions
         predictions = []
@@ -302,7 +302,7 @@ if __name__ == "__main__":
                 # calculate outputs by running images through the network
                 outputs = net(inputs)
                 # store the predicted outputs
-                prediction = outputs.numpy().flatten()
+                prediction = outputs.cpu().numpy().flatten()
                 predictions.append(prediction)
                 # check the loss
                 test_loss = criterion(outputs, labels)
@@ -339,7 +339,7 @@ if __name__ == "__main__":
         # Write the predicted poses to an output CSV
         # in the submission format expected
         test_dataset_name = test_loader.dataset.root_dir.split("/")[1]
-        write_output_csv(predictions, epoch, test_dataset_name)
+        write_output_csv(predictions, sample_csv, epoch, test_dataset_name)
 
     ####################################
     ####################################
@@ -360,18 +360,20 @@ if __name__ == "__main__":
                 TEST_SYNTHETIC_CSV,
                 TEST_SYNTHETIC_ROOT,
             )
+            # Test the loaded model on the synthetic data
+            test(1, TEST_SYNTHETIC_CSV)
         elif TEST_REAL == True:
             print("Testing for images in: {}".format(TEST_REAL_ROOT))
             test_loader = build_final_test_data_loader(
                 batch_size_test, img_downscale_size, TEST_REAL_CSV, TEST_REAL_ROOT
             )
+            # Test the loaded model on the real data
+            test(1, TEST_REAL_CSV)
         else:
             print(
                 "FAIL: Please specify whether to test the Real or Synthetic dataset (-tr or -ts)"
             )
             sys.exit()
-        # Test the loaded model
-        test()
     else:
         #################################################################
         ## Load the custom SatellitePoseDataset into PyTorch DataLoaders
@@ -391,7 +393,7 @@ if __name__ == "__main__":
         # Train and test for each epoch
         for epoch in epoch_range:
             train(epoch)
-            test(epoch)
+            test(epoch, VALIDATION_CSV)
             train_loss = np.mean(train_losses)
             test_loss = np.mean(test_losses)
             print("[Epoch {}] Avg. Train Loss: {}".format(epoch, train_loss))
