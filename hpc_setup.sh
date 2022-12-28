@@ -1,3 +1,5 @@
+# https://hpc-docs.uni.lu/jobs/gpu/
+# si-gpu # (access a GPU node for interactive jobs)
 # conda create --name myenv
 # conda activate myenv
 
