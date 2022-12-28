@@ -9,6 +9,9 @@ For more information, please see the SPARK Challenge ( https://cvi2.uni.lu/spark
 
 See `requirements.txt` and make sure to also install `cudatoolkit` if you plan to run with a GPU.
 
+# HPC Environment Setup
+
+If running on the UniLux HPC, please see notes in `hpc_setup.sh`
 
 # Running the code
 
