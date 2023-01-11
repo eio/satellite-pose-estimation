@@ -250,14 +250,16 @@ if __name__ == "__main__":
             # labels = batch["pose"].float().reshape(1, 7 * batch_size_train)
             # zero the parameter gradients
             optimizer.zero_grad()
-            # forward + backward + optimize
+            # forward + backward propagation
             outputs = net(inputs)
-            # print("ouputs:", outputs.shape)
-            # print("labels:", labels.shape)
+            # calculate the loss
             loss = criterion(outputs, labels)
             loss.backward()
+            # store the loss value for this batch
+            train_losses.append(test_loss.item())
+            # perform an optimization step (parameter update)
             optimizer.step()
-            # print and store statistics
+            # print some statistics based on the log interval
             if i % LOG_INTERVAL == 0:
                 print(
                     "Train Epoch: {} [{}/{} ({}%)]\tLoss: {}".format(
@@ -268,7 +270,6 @@ if __name__ == "__main__":
                         loss.item(),
                     )
                 )
-                train_losses.append(loss.item())
                 train_counter.append(
                     (i * batch_size_train) + ((epoch - 1) * len(train_loader.dataset))
                 )
@@ -304,16 +305,16 @@ if __name__ == "__main__":
                 # store the predicted outputs
                 prediction = outputs.cpu().numpy().flatten()
                 predictions.append(prediction)
-                # check the loss
+                # calculate the loss
                 test_loss = criterion(outputs, labels)
-                # print("outputs:", outputs)
-                # print("labels:", labels)
+                # store the loss value for this batch
+                test_losses.append(test_loss.item())
                 ## Consider prediction to be correct
                 ## if `test_loss` is "close enough" to a perfect score of 0.0
                 close_enough = 0.001
                 if test_loss <= close_enough:
                     correct += 1
-                # print and store statistics
+                # print some statistics based on the log interval
                 if i % LOG_INTERVAL == 0:
                     print(
                         "Test: [{}/{} ({}%)]\tLoss: {}".format(
@@ -323,7 +324,6 @@ if __name__ == "__main__":
                             test_loss.item(),
                         )
                     )
-                    test_losses.append(test_loss.item())
                     test_counter.append(
                         (i * batch_size_test) + ((epoch - 1) * len(test_loader.dataset))
                     )

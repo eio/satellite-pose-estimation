@@ -1,0 +1,19 @@
+# Host iris-cluster
+Host iris
+    Hostname        access-iris.uni.lu
+    Port            8022
+    ForwardAgent    no
+    User            <username>
+    Compression     yes
+    ConnectTimeout  15
+    IdentityFile    <path-to-private-key>
+
+# Host aion-cluster
+Host aion
+    Hostname        access-aion.uni.lu
+    Port            8022
+    ForwardAgent    no
+    User            <username>
+    Compression     yes
+    ConnectTimeout  15
+    IdentityFile    <path-to-private-key>
