@@ -1,0 +1,1 @@
+When `run_train_model.py` finishes running, a plot of the loss-per-epoch will be output to this directory.
