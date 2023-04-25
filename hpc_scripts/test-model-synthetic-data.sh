@@ -6,7 +6,7 @@
 #SBATCH -N 2
 #SBATCH -J CVIA-Test-SYNTHETIC-Stream-2-Elliott
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=elliott.wobler.001@student.uni.lu
+#SBATCH --mail-user=001@student.uni.lu
 
 cd /home/users/ewobler/satellite-pose-estimation-main/
 conda activate torchit

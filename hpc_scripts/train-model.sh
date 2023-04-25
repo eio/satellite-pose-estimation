@@ -6,7 +6,7 @@
 #SBATCH -N 2
 #SBATCH -J CVIA-Train-Stream-2-Elliott
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=elliott.wobler.001@student.uni.lu
+#SBATCH --mail-user=001@student.uni.lu
 
 cd /home/users/ewobler/satellite-pose-estimation-main/
 conda activate torchit
@@ -17,5 +17,6 @@ export ANACONDA=/opt/apps/resif/iris/2019b/default/modules/all/lang/Anaconda3/
 export MODULEPATH=/opt/apps/resif/iris/2019b/gpu/modules/all/
 module load system/CUDA/
 
-# train the model from scratch on the full training set
-python run_train_model.py
+# python run_model.py
+## While running, print unbuffered output to --output file
+python -u run_model.py
