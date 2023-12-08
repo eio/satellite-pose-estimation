@@ -67,6 +67,7 @@ class SatellitePoseDataset(torch.utils.data.Dataset):
 
 class Rescale(object):
     """Rescale the image in a sample to a given size.
+
     Args:
         output_size (tuple or int): Desired output size. If tuple, output is
             matched to output_size. If int, smaller of image edges is matched

@@ -17,19 +17,19 @@ If running on the UniLux HPC, please see notes in `hpc_setup.sh`
 
 To train the model:
 
-	python run_model.py
+	python run_train_model.py
 
 To train the model and output all print statements to a local file:
 
-	python run_model.py > LOGS.txt
+	python run_train_model.py > LOGS.txt
 
 To load and test the saved, pre-trained model on the `test_real` dataset:
 
-	python run_model.py -l -tr
+	python run_train_model.py -l -tr
 
 To load and test the saved, pre-trained model on the `test_synthetic` dataset:
 
-	python run_model.py -l -ts
+	python run_train_model.py -l -ts
 
 
 # Output and results
